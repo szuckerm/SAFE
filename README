@@ -1,0 +1,214 @@
+This is the University of Delaware's Self-Aware FramEwork (SAFE).
+
+Requirements:
+----------------------------------------------------------------------------------------------------
+-   To generate synthetic benchmarks
+* Python v2.7+ (should work with Python 3 but not tested)
+
+-   To generate the framework:
+* g++ v4.8+  (we are using some C++11 features not available before this version).
+* GNU make (not tested with BSD make)
+
+
+Building:
+----------------------------------------------------------------------------------------------------
+make mrproper
+make
+
+* A binary ("safe") should have been built.
+
+
+Content of the Framework folder:
+----------------------------------------------------------------------------------------------------
+./input/ --> Folder that contains the .queue and .task files.
+./logs/  --> Folder that contains the output logs of the files
+             (Overwrited if the folder exist and created if it does not exist.)
+./instructionNewFormat_3_0_8_PerOpClassEnergyMap_TechScaled.txt	--> Table with energy per
+                                                                    instruction (pJ), provided
+                                                                    by Ganesh Venkatesh.
+./queueGenerationScript.py		--> Python queue Generation Script
+./taskGenerationScript.py		--> Phyton Task Generation Script
+
+Usage:
+----------------------------------------------------------------------------------------------------
+The Framework has two folders are used during execution. "input" and "logs". The user should know
+that a Task is a collection of serial instructions and a Queue is a collection of tasks. These are
+the necessary steps required to run the framework.
+
+1. Generate as many synthetic tasks as required, using the following scripts:
+
+>> taskGenerationScript.py <task name> <inst count> <full op header> <ntv op header> <inst>:<percent> ...
+
+* The task name is defined by the user.
+* The instruction count is the number of instructions that the task contains.
+* Full op header and NTV op header are the columns in the
+  "instructionNewFormat_3_0_8_PerOpClassEnergyMap_TechScaled.txt" file.
+* Currently, only 22nm has NTV information. Its header is 22nm_NTV.
+* Instructions are the rows in the "instructionNewFormat_3_0_8_PerOpClassEnergyMap_TechScaled.txt"
+  file. It must exist.
+* The sum of all the percentages of the instructions must be 100 %.
+* The output of this script is a file named <task name>.task.
+
+Example:
+python taskGenerationScript.py exampleTask1 1000 22nm 22nm_NTV div_int:50 div_fp:50
+
+This example creates the file exampleTask1.task with 500 integer divisions and 500 floating point
+divisions organized in random order.
+
+2. Generate one queue of tasks, using the following script
+
+>> queueGenerationScript.py <queue name> <inst count> <task>:<percent> ...
+
+* queue name is defined by the user.
+* inst count is the number of instructions that the queue contains.
+* For each task, a file with name <task name>. task must exist.
+* The sum of all the percentages of the tasks must be 100%.
+* The output of this script is a file named <queue name>.queue.
+
+Example:
+python queueGenerationScript.py exampleQueue 10000 exampleTask1:30 exampleTask2:30 exampleTask3:40
+
+This example creates the file exampleQueue.queue containing 3000 entries of exampleTask1, 3000
+entries of exampleTask2 and 4000 entries of exampleTask3.
+
+3. Then run safe with the queue name as the only parameter.
+
+./safe <queue name>
+
+Example: ./safe exampleQueue
+
+* The input/ folder is implicitly assumed
+
+Output:
+----------------------------------------------------------------------------------------------------
+The output of the framework is divided in two parts.
+
+1. Standard output: corresponds to the statistics of the execution. These statistics are:
+
+* Chip dimensions, number of blocks, units and chips.
+* Input file.
+* Temperature average, variance and skew (See Bugs and Future Work section).
+* Power average, variance and skew (See Bugs and Future Work section).
+* Number of tasks executed.
+* Number of instructions executed.
+* Number of cycles
+* Roles time: Correspond to the time the program used in sending and receiving messages using the
+  API.
+* Simulation time: Correspond to the time used in updating the clock of the system and scheduling
+* Barriers Time: Correspond to the time used in syncronization between all the threads.
+
+* Updating Temperature and Power models Time: Correspond to the program spent using the power and
+  temperature models
+* Total execution time.
+
+2. Detailed log files: includes the temperature, power, changes in state and messages sent (See Bugs
+   and Future Work Section).
+
+For each of the threads, a log file is created. The name of the log files contains the information
+of the specific block, as explained below:
+
+>> temperatureRun.log.brdWW.chpXX.untYY.blkZZ
+
+* WW corresponds to the board number (See Bugs and Future Work section)
+* XX corresponds to the chip number (See Bugs and Future Work section)
+* YY Corresponds to the unit number
+* ZZ Corresponds to the block number
+
+Threads are given an ID for each level in the hierarchy (block, unit, chip, board). Right now, if a
+thread is given an ID 0 for a given component, then it is also given a role as "Super-CE" for that
+level of the architecture.
+For example, for brd00.chp00.unit00.blk00, the thread executes all the roles of "Super-CE" for its
+unit, chip, and board. But for brd00.chp00.unit10.blk00, the thread executes the role of unit
+"Super-CE" only. Once again, all threads are at least assigned a role to manage a local block.  This
+means, that those files will contain log information for each of the role they take.
+
+The format for the log file, for each of the lines corresponds to:
+
+>> [TYPE_OF_LOG] [ELEMENT](Optional) {description, value and cycle}
+
+Examples of log file lines are:
+
+>> [RMD_TRACE_AGGREGATE] [Chip] Temperature Average of 50.00C at cycle 0.
+>> [RMD_TRACE_AGGREGATE] [Unit] Temperature Average of 50.00C at cycle 0.
+>> [RMD_TRACE_TEMPERATURE] Temperature of 50.0C at cycle 200000.
+
+
+Configuration File:
+----------------------------------------------------------------------------------------------------
+The file ss-conf.h requires a more detailed explanation, because it provides some configurations
+that have to be set before compiling the code.  In this section we explain some of this parameters
+
+
+Name                      Value        Description
+====================================================================================================
+LOGGING_LEVEL                 0 or 1           Enable/Disable the generation of log files.
+LOGGING_INTERVAL              In cycles        How often the log is written.
+EXECUTION_TIMES               0 or 1           Enable/Disable the time statistics as part of the
+                                               output (See output section)
+N_UNITS_IN_CHIP               16UL             Number of units per chip (See Bugs and Future Work
+                                               Section)
+N_BLOCKS_IN_UNIT              16UL             Number of blocks per unit (See Bugs and Future Work
+                                               Section)
+N_CORES_IN_UNIT               8UL              Number of XEs per block (See Bugs and Future Work
+                                               Section)
+ROLLING_ENERGY_WINDOW         100              Specify the size, in cycles, of the window, for
+                                               computing the power.
+MAX_XE_CLOCK_SPEED_MHZ        4200             Clock speed of XEs in MHz at Full State
+S_CHIP_IN_MM                  500              Chip size in mm^2.
+TEMPERATURE_JUNCTION          127              Maximum junction point temperature.
+TEMPERATURE_OPERATION         100              Maximum operating temperature threshold.
+TEMPERATURE_AMBIENT           50               Minimum temperature threshold.
+CYCLES_PER_ITERATION          1                Cycles passed per iteration of temperature model
+                                               (affects the temperature model).
+COMM_INTERVAL                 10000000         In cycles, how often to send the status information
+                                               up the tree.
+BARRIER_INTERVALS             1000000          In cycles, how often the simulation is sincronized
+QUEUE_FILE_SUFFIX             ".queue"         Extension of the files that describe a queue (See
+                                               Usage section)
+TASK_FILE_SUFFIX              ".task"          Extension of the files that describe a task (See
+                                               Usage section)
+OUT_FILE_PREFIX               "temperatureRun" Outfix of the output log files (See Output section)
+MAX_POWER_PER_BLOCK           10.0             Maximum power a block can transmit in its status
+                                               messages
+HALF_STATE_STATIC_ENERGY      0.0              How much energy is consumed when no instruction is
+                                               being executed, during Half freq. state
+                                               (Static Energy model)
+FULL_STATE_STATIC_ENERGY      0.0              How much energy is consumed when no instruction is
+                                               being executed, during Full freq. state
+                                               (Static Energy model)
+STATIC_ENERGY_FACTOR_FULL     0.2              Factor of the energy that sums up to the instruction
+                                               as static energy, when full freq. state.
+                                               (Static Energy model)
+STATIC_ENERGY_FACTOR_HALF     0.5              Factor of the energy that sums up to the instruction
+                                               as static energy, when half freq. state.
+                                               (Static Energy model)
+BLOCK_QUEUE_MAX_SIZE          100              Limits the max number of tasks in the queue per each
+                                               block. (See Bugs and Future Work section)
+LOAD_INSTRUCTIONS_CHUNK_SIZE  100000000        for large files, the file must be divided in chunks
+                                               (memory limit). That is, in instructions, the size of
+                                               this chunk
+====================================================================================================
+
+
+Constraints
+----------------------------------------------------------------------------------------------------
+* The framework is currently fixed for 1 chip, 16 units per chip and 16 blocks per unit. Changes
+  will result in crashes
+* The framework does not support more than 1 board.
+* For visualization of results it is necessary to have an additional script. Currently, our videos
+  have been generated in MATLAB.
+* Besides the state messages, no control orders messages are being sent right now. However, the
+  communication infrastructure is currently available.
+
+Known Bugs
+----------------------------------------------------------------------------------------------------
+* Currently, the BLOCK_QUEUE_MAX_SIZE is not functional, hence, the queues have no bounds.
+* The statistics for temperature variance and skew are not available at the end of the execution.
+* The statistics for power average, variance and skew are not available at the end of the execution.
+
+TODO
+----------------------------------------------------------------------------------------------------
+* Some of the log messages have not been defined, however, the current format allows the definition
+  of these messages.
+* The current scheduling is made completely randomly, changes are necessary.
+* Add top-down resource management orders.
