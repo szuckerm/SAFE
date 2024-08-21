@@ -1,0 +1,96 @@
+// Per Operation Energy in picojoules separated by pipeline stage for 22nm process
+//
+//      OP: operation type.
+// latency: the latency an operation takes
+//     NTV: whether the numbers correspond to NTV or not.
+//    reg#: number of registers accessed .
+//   fetch: energy for fetch (same for all instructions).
+//  decode: energy for decode (same for all instructions).
+//   issue: energy for issuing the instruction. Dependent on the number of 
+//          register accesses plus one.
+//      RF: energy for accessing register files. Dependent on the number of 
+//          register accesses.
+//    exec: energy for executing an instruction. Differs for all instructions.
+//     msr: energy for accessing MSRs (same for all instructions).
+//  commit: energy for committing the instruction (same for all instructions.
+//
+// Formulas for computing the total issue & RF energy for an instruction:
+//         issue_energy_per_inst = (1 + reg#) * issue 
+//         RF_energy_per_inst    = reg# * RF
+//
+// Total Energy per op:
+//         tEnergy = fetch + decode + ((1 + reg#)*issue) + (reg# * RF) + exec + msr + commit
+//
+// The Operation energies at the end of the file correspond to pseudo operations that mimic
+// the energies for different types of memory accesses.
+//
+//op            NTV  latency    reg#     fetch    decode     issue       RF     exec     msr    commit
+no_op             0        1       0      6.19      3.44       0.0      0.0      0.0     0.0       0.0
+no_op             1        1       0     1.238     0.688       0.0      0.0      0.0     0.0       0.0
+sincos_fp         0        8       2      6.19      3.44    0.3698    3.268   265.31   1.505    0.3698
+sincos_fp         1        8       2     1.238     0.688     0.074    0.654   53.062   0.301     0.074
+div_fp            0        8       2      6.19      3.44    0.3698    3.268   189.20   1.505    0.3698
+div_fp            1        8       2     1.238     0.688     0.074    0.654   37.840   0.301     0.074
+sqrt_fp           0        8       2      6.19      3.44    0.3698    3.268   189.20   1.505    0.3698
+sqrt_fp           1        8       2     1.238     0.688     0.074    0.654   37.840   0.301     0.074
+fma_fp            0        8       4      6.19      3.44    0.3698    3.268    39.13   1.505    0.3698
+fma_fp            1        8       4     1.238     0.688     0.074    0.654    7.826   0.301     0.074
+arith-adv_fp      0        8       3      6.19      3.44    0.3698    3.268   33.282   1.505    0.3698
+arith-adv_fp      1        8       3     1.238     0.688     0.074    0.654    6.656   0.301     0.074
+arith-simple_fp   0        8       3      6.19      3.44    0.3698    3.268    7.826   1.505    0.3698
+arith-simple_fp   1        8       3     1.238     0.688     0.074    0.654    1.565   0.301     0.074
+div_int           0        8       3      6.19      3.44    0.3698    3.268  91.9641   1.505    0.3698
+div_int           1        8       3     1.238     0.688     0.074    0.654   18.393   0.301     0.074
+fma_int           0        8       4      6.19      3.44    0.3698    3.268   18.189   1.505    0.3698
+fma_int           1        8       4     1.238     0.688     0.074    0.654    3.638   0.301     0.074
+arith-adv_int     0        8       3      6.19      3.44    0.3698    3.268   16.254   1.505    0.3698
+arith-adv_int     1        8       3     1.238     0.688     0.074    0.654    3.251   0.301     0.074
+arith-simple_int  0        8       2      6.19      3.44    0.3698    3.268    2.881   1.505    0.3698
+arith-simple_int  1        8       2     1.238     0.688     0.074    0.654    0.576   0.301     0.074
+bitops            0        8       2      6.19      3.44    0.3698    3.268    0.529   1.505    0.3698
+bitops            1        8       2     1.238     0.688     0.074    0.654    0.106   0.301     0.074
+rmem              0        8       3      6.19      3.44    0.3698    3.268    2.881   1.505    0.3698
+rmem              1        8       3     1.238     0.688     0.074    0.654    0.576   0.301     0.074
+rmem_sp           0        8       3      6.19      3.44    0.3698    3.268    2.881   1.505    0.3698
+rmem_sp           1        8       3     1.238     0.688     0.074    0.654    0.576   0.301     0.074
+lmem              0        8       3      6.19      3.44    0.3698    3.268    12.38   1.505    0.3698
+lmem              1        8       3     1.238     0.688     0.074    0.654   12.384   0.301     0.074
+lmem_sp           0        8       3      6.19      3.44    0.3698    3.268    24.77   1.505    0.3698
+lmem_sp           1        8       3     1.238     0.688     0.074    0.654   24.768   0.301     0.074
+cache             0        8       3      6.19      3.44    0.3698    3.268    13.16   1.505    0.3698
+cache             1        8       3     1.238     0.688     0.074    0.654   13.158   0.301     0.074
+cache_sp          0        8       3      6.19      3.44    0.3698    3.268    26.32   1.505    0.3698
+cache_sp          1        8       3     1.238     0.688     0.074    0.654   26.316   0.301     0.074
+// Memory access energies:
+lmem-read         0        8       0       0.0       0.0       0.0      0.0    9.503     0.0       0.0
+lmem-read         1        8       0       0.0       0.0       0.0      0.0    9.503     0.0       0.0
+lmem-write        0        8       0       0.0       0.0       0.0      0.0    9.503     0.0       0.0
+lmem-write        1        8       0       0.0       0.0       0.0      0.0    9.503     0.0       0.0
+spad              0        8       0       0.0       0.0       0.0      0.0    9.503     0.0       0.0
+spad              1        8       0       0.0       0.0       0.0      0.0    9.503     0.0       0.0
+bsm               0        8       0       0.0       0.0       0.0      0.0   15.100     0.0       0.0
+bsm               1        8       0       0.0       0.0       0.0      0.0   15.093     0.0       0.0
+spad-bulk         0        8       0       0.0       0.0       0.0      0.0    76.02     0.0       0.0
+spad-bulk         1        8       0       0.0       0.0       0.0      0.0    76.02     0.0       0.0
+bsm-bulk          0        8       0       0.0       0.0       0.0      0.0  121.000     0.0       0.0
+bsm-bulk          1        8       0       0.0       0.0       0.0      0.0  120.744     0.0       0.0
+l1cache-data      0        8       0       0.0       0.0       0.0      0.0     9.50     0.0       0.0
+l1cache-data      1        8       0       0.0       0.0       0.0      0.0     9.50     0.0       0.0
+l1cache-data-bulk 0        8       0       0.0       0.0       0.0      0.0    76.02     0.0       0.0
+l1cache-data-bulk 1        8       0       0.0       0.0       0.0      0.0    76.02     0.0       0.0
+l2cache-data      0        8       0       0.0       0.0       0.0      0.0    15.09     0.0       0.0
+l2cache-data      1        8       0       0.0       0.0       0.0      0.0    15.09     0.0       0.0
+l2cache-data-bulk 0        8       0       0.0       0.0       0.0      0.0   120.72     0.0       0.0
+l2cache-data-bulk 1        8       0       0.0       0.0       0.0      0.0   120.72     0.0       0.0
+l3cache-data      0        8       0       0.0       0.0       0.0      0.0    39.35     0.0       0.0
+l3cache-data      1        8       0       0.0       0.0       0.0      0.0    39.35     0.0       0.0
+l3cache-data-bulk 0        8       0       0.0       0.0       0.0      0.0   314.76     0.0       0.0
+l3cache-data-bulk 1        8       0       0.0       0.0       0.0      0.0   314.76     0.0       0.0
+l4cache-data      0        8       0       0.0       0.0       0.0      0.0    78.69     0.0       0.0
+l4cache-data      1        8       0       0.0       0.0       0.0      0.0    78.69     0.0       0.0
+l4cache-data-bulk 0        8       0       0.0       0.0       0.0      0.0   629.52     0.0       0.0
+l4cache-data-bulk 1        8       0       0.0       0.0       0.0      0.0   629.52     0.0       0.0
+dram              0        8       0       0.0       0.0       0.0      0.0 11968.00     0.0       0.0
+dram              1        8       0       0.0       0.0       0.0      0.0 11968.00     0.0       0.0
+dram-bulk         0        8       0       0.0       0.0       0.0      0.0 15053.00     0.0       0.0
+dram-bulk         1        8       0       0.0       0.0       0.0      0.0 15052.80     0.0       0.0
